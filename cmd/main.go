@@ -113,9 +113,9 @@ func proxyHandler(target string) http.Handler {
 		req.Host = targetURL.Host
 	}
 
-	// Optional: Customize the error handler
+	// Optional: Customize the errors handler
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Printf("Proxy error: %v", err)
+		log.Printf("Proxy errors: %v", err)
 		http.Error(w, "Bad internal", http.StatusBadGateway)
 	}
 
