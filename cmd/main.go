@@ -1,123 +1,78 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"context"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"GoGateway/config"
+	"GoGateway/infra"
+	"GoGateway/infra/db"
+	"GoGateway/internal/adapters/api"
+	"GoGateway/internal/app"
+	"GoGateway/util"
 )
 
-// Configuration for backend services
-type Service struct {
-	Name string
-	URL  string
-}
-
-var services = []Service{
-	{Name: "users", URL: "http://localhost:4001"},
-	{Name: "orders", URL: "http://localhost:4002"},
-	{Name: "products", URL: "http://localhost:4003"},
-}
-
 func main() {
-	r := chi.NewRouter()
+	// Load configuration
+	cfg := config.LoadConfig()
 
-	// Global Middlewares
-	r.Use(middleware.Logger)            // Logs each request
-	r.Use(middleware.Recoverer)         // Recovers from panics
-	r.Use(middleware.Timeout(60 * 1e9)) // Sets a timeout of 60 seconds
+	// Initialize Logger
+	logger := util.NewLogger(cfg.LogLevel)
+	logger.Info("Starting API Gateway")
 
-	// CORS Middleware (Optional: Uncomment if needed)
-	/*
-		r.Use(middleware.AllowContentType("application/json"))
-		r.Use(middleware.CORS(
-			middleware.CORSOptions{
-				AllowedOrigins: []string{"*"},
-				AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-				AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-			},
-		))
-	*/
-
-	// Root Route
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Welcome to the API internal"))
-	})
-
-	// Health Check Route
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
-
-	// Dynamically set up proxy routes for each service
-	for _, service := range services {
-		svc := service // capture range variable
-		r.Route("/"+svc.Name, func(r chi.Router) {
-			// Subrouter Middlewares (Optional: Add service-specific middleware)
-			r.Use(serviceMiddleware(svc.Name))
-
-			// Proxy all subpaths to the respective service
-			r.Handle("/*", proxyHandler(svc.URL))
-		})
-	}
-
-	// Start the server
-	port := ":3000"
-	fmt.Printf("API internal is listening on port %s\n", port)
-	if err := http.ListenAndServe(port, r); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
-}
-
-// serviceMiddleware is an example middleware for specific services
-func serviceMiddleware(serviceName string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Example: Add a header to indicate which service is handling the request
-			w.Header().Set("X-Served-By", serviceName)
-			// Example: Implement authentication or other checks here
-			// For instance:
-			/*
-				token := r.Header.Get("Authorization")
-				if token != "expected-token" {
-					http.Error(w, "Unauthorized", http.StatusUnauthorized)
-					return
-				}
-			*/
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// proxyHandler creates a reverse proxy to the given target
-func proxyHandler(target string) http.Handler {
-	// Parse the target URL
-	targetURL, err := url.Parse(target)
+	// Initialize Database Repository
+	authRepo, err := db.NewAuthRepository(cfg.DBConnectionStr, logger)
 	if err != nil {
-		log.Fatalf("Invalid target URL %s: %v", target, err)
+		logger.Fatal("Failed to initialize Auth Repository", "error", err)
+	}
+	defer authRepo.Close()
+
+	// Initialize HTTP Client for External APIs
+	httpClient := infra.NewHTTPClient(cfg.RequestTimeout, logger)
+
+	// Initialize Application Service
+	authService := app.NewAuthService(authRepo, httpClient, cfg.ExternalAPIBase, logger)
+
+	// Initialize API Handlers
+	handlers := api.NewHandler(authService, logger)
+
+	// Initialize Router
+	router := api.NewRouter(handlers, logger)
+
+	// Initialize HTTP Server
+	server := &http.Server{
+		Addr:    cfg.ServerPort,
+		Handler: router,
+		// Timeouts to prevent Slowloris attacks
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	// Create the reverse proxy
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
+	// Start Server in a Goroutine
+	go func() {
+		logger.Info("API Gateway is listening", "port", cfg.ServerPort)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("ListenAndServe failed", "error", err)
+		}
+	}()
 
-	// Modify the request to direct it to the target
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		originalDirector(req)
-		// Optionally, modify the request here (e.g., add headers)
-		req.Host = targetURL.Host
+	// Graceful Shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	logger.Info("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Fatal("Server forced to shutdown", "error", err)
 	}
 
-	// Optional: Customize the errors handler
-	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Printf("Proxy errors: %v", err)
-		http.Error(w, "Bad internal", http.StatusBadGateway)
-	}
-
-	return proxy
+	logger.Info("Server exiting")
 }
