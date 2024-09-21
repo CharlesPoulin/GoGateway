@@ -5,6 +5,7 @@ import (
 	"GoGateway/internal/ports"
 	"GoGateway/util"
 	"GoGateway/util/errors"
+	"net/http"
 )
 
 type AuthService interface {
@@ -47,11 +48,17 @@ func (s *authService) Authenticate(username, password string) (string, *errors.A
 	return token, nil
 }
 
-// ValidateToken checks the validity of the given token
 func (s *authService) ValidateToken(token string) (bool, *errors.AppError) {
-	// Placeholder logic: Implement actual token validation
-	if token == "valid-token" {
-		return true, nil
+	if token == "" {
+		return false, errors.NewAppError("Invalid token", http.StatusBadRequest)
 	}
-	return false, errors.NewUnauthorizedError("Invalid token", nil)
+
+	// Simulate token validation
+	isValid := token == "valid_token_example" // Replace with actual validation logic
+
+	if !isValid {
+		return false, errors.NewAppError("Token validation failed", http.StatusUnauthorized)
+	}
+
+	return true, nil
 }
