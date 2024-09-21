@@ -36,7 +36,7 @@ func NewRouter(handler *Handler, logger util.Logger) http.Handler {
 		r.Use(apiMiddleware.Auth)
 
 		r.Get("/user", handler.GetUser)
-		// Add other protected routes here
+		r.Get("/users", handler.GetUsers)
 	})
 
 	// Health Check

@@ -7,7 +7,7 @@ import (
 
 type AuthRepository interface {
 	GetUserByID(id string) (*domain.User, *errors.AppError)
-	// Add the Close method to the interface
+	GetUsers() ([]*domain.User, *errors.AppError)
 	Close() error
 	// Define other repository methods as needed
 }

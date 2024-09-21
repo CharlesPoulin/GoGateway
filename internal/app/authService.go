@@ -15,6 +15,8 @@ type AuthService interface {
 	GetUserByID(id string) (*domain.User, *errors.AppError)
 	Authenticate(username, password string) (string, *errors.AppError)
 	ValidateAndExtractClaims(token string) (jwt.MapClaims, bool, *errors.AppError)
+	// New method to get all users
+	GetUsers() ([]*domain.User, *errors.AppError)
 }
 
 type authService struct {
@@ -42,6 +44,15 @@ func (s *authService) GetUserByID(id string) (*domain.User, *errors.AppError) {
 		return nil, errors.NewNotFoundError("User not found", err)
 	}
 	return user, nil
+}
+
+// GetUsers fetches all users
+func (s *authService) GetUsers() ([]*domain.User, *errors.AppError) {
+	users, err := s.repo.GetUsers()
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // Authenticate generates a JWT token after validating the user's credentials

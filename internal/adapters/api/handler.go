@@ -37,6 +37,16 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	util.RespondWithJSON(w, http.StatusOK, user)
 }
 
+// GetUsers handles GET /users
+func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.AuthService.GetUsers()
+	if err != nil {
+		util.RespondWithError(w, err.GetStatusCode(), err.Error())
+		return
+	}
+	util.RespondWithJSON(w, http.StatusOK, users)
+}
+
 // Authenticate handles POST /authenticate
 func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 	var creds struct {

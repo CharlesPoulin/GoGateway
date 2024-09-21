@@ -14,6 +14,12 @@ Content-Type: application/json
 GET http://localhost:3000/user?id=123
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjcxOTY5NTgsInVzZXJuYW1lIjoiYWRtaW4ifQ._aAKSqOqKLWsuHpOKDeCJo8T0CLq7IA6zAea2qLtrIc
 
+
+### Fetch the authenticated users
+
+GET http://localhost:3000/users
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjcxOTY5NTgsInVzZXJuYW1lIjoiYWRtaW4ifQ._aAKSqOqKLWsuHpOKDeCJo8T0CLq7IA6zAea2qLtrIc
+
 ### Health check endpoint (does not require authentication)
 GET http://localhost:3000/health
 
