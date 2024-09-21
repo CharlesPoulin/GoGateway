@@ -6,12 +6,15 @@ import (
 	"GoGateway/util"
 	"GoGateway/util/errors"
 	"net/http"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthService interface {
 	GetUserByID(id string) (*domain.User, *errors.AppError)
 	Authenticate(username, password string) (string, *errors.AppError)
-	ValidateToken(token string) (bool, *errors.AppError) // This method must be implemented
+	ValidateAndExtractClaims(token string) (jwt.MapClaims, bool, *errors.AppError)
 }
 
 type authService struct {
@@ -19,14 +22,16 @@ type authService struct {
 	httpClient  ports.HTTPClient
 	externalAPI string
 	logger      util.Logger
+	jwtSecret   string // Secret key for signing JWT
 }
 
-func NewAuthService(repo ports.AuthRepository, httpClient ports.HTTPClient, externalAPI string, logger util.Logger) AuthService {
+func NewAuthService(repo ports.AuthRepository, httpClient ports.HTTPClient, externalAPI string, logger util.Logger, jwtSecret string) AuthService {
 	return &authService{
 		repo:        repo,
 		httpClient:  httpClient,
 		externalAPI: externalAPI,
 		logger:      logger,
+		jwtSecret:   jwtSecret,
 	}
 }
 
@@ -39,27 +44,53 @@ func (s *authService) GetUserByID(id string) (*domain.User, *errors.AppError) {
 	return user, nil
 }
 
-// Authenticate authenticates the user with username and password
+// Authenticate generates a JWT token after validating the user's credentials
 func (s *authService) Authenticate(username, password string) (string, *errors.AppError) {
 	if username != "admin" || password != "password" {
 		return "", errors.NewUnauthorizedError("Invalid credentials", nil)
 	}
-	token := "some-generated-token" // Replace with actual token generation logic
-	return token, nil
+
+	// Create the JWT claims, which include the username and expiry time
+	claims := &jwt.MapClaims{
+		"username": username,
+		"exp":      time.Now().Add(time.Hour * 72).Unix(), // 72 hours expiration
+	}
+
+	// Create the token with the claims
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Sign the token using the secret key
+	tokenString, err := token.SignedString([]byte(s.jwtSecret))
+	if err != nil {
+		return "", errors.NewInternalServerError("Error generating token", err)
+	}
+
+	return tokenString, nil
 }
 
-func (s *authService) ValidateToken(token string) (bool, *errors.AppError) {
-	if token == "" {
-		// Return the pointer directly, no need for dereferencing
-		return false, errors.NewAppError("Invalid token", http.StatusBadRequest)
+// ValidateAndExtractClaims validates the JWT token and returns the claims
+func (s *authService) ValidateAndExtractClaims(tokenString string) (jwt.MapClaims, bool, *errors.AppError) {
+	if tokenString == "" {
+		return nil, false, errors.NewAppError("Invalid token", http.StatusBadRequest)
 	}
 
-	// Simulate token validation
-	isValid := token == "valid_token_example" // Replace with actual validation logic
+	// Parse the token and extract claims
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Ensure the signing method is HMAC (HS256)
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.NewAppError("Unexpected signing method", http.StatusUnauthorized)
+		}
+		return []byte(s.jwtSecret), nil
+	})
 
-	if !isValid {
-		return false, errors.NewAppError("Token validation failed", http.StatusUnauthorized)
+	if err != nil || !token.Valid {
+		return nil, false, errors.NewAppError("Token validation failed", http.StatusUnauthorized)
 	}
 
-	return true, nil
+	// Extract claims from the token
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, true, nil
+	}
+
+	return nil, false, errors.NewAppError("Invalid token claims", http.StatusUnauthorized)
 }

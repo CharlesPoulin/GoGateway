@@ -8,6 +8,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+
 	"GoGateway/config"
 	"GoGateway/infra"
 	"GoGateway/infra/db"
@@ -24,6 +28,9 @@ func main() {
 	logger := util.NewLogger(cfg.LogLevel)
 	logger.Info("Starting API Gateway")
 
+	// Run database migrations
+	runMigrations(cfg, logger)
+
 	// Initialize Database Repository
 	authRepo, err := db.NewAuthRepository(cfg.DBConnectionStr, logger)
 	if err != nil {
@@ -35,7 +42,7 @@ func main() {
 	httpClient := infra.NewHTTPClient(cfg.RequestTimeout, logger)
 
 	// Initialize Application Service
-	authService := app.NewAuthService(authRepo, httpClient, cfg.ExternalAPIBase, logger)
+	authService := app.NewAuthService(authRepo, httpClient, cfg.ExternalAPIBase, logger, "secretstringtodo")
 
 	// Initialize API Handlers
 	handlers := api.NewHandler(authService, logger)
@@ -75,4 +82,23 @@ func main() {
 	}
 
 	logger.Info("Server exiting")
+}
+
+// runMigrations runs the database migrations using golang-migrate
+func runMigrations(cfg *config.Config, logger util.Logger) {
+	logger.Info("Running database migrations...")
+
+	// Initialize the migration
+	m, err := migrate.New(cfg.MigrationPath, cfg.DBConnectionStr)
+	if err != nil {
+		logger.Fatal("Failed to initialize migration", "error", err)
+	}
+
+	// Apply the migrations
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		logger.Fatal("Migration failed", "error", err)
+	}
+
+	logger.Info("Migrations applied successfully!")
 }

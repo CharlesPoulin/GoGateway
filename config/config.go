@@ -14,6 +14,7 @@ type Config struct {
 	ExternalAPIBase string
 	RequestTimeout  time.Duration
 	LogLevel        string
+	MigrationPath   string
 }
 
 // LoadConfig loads configuration from .env file and environment variables
@@ -24,20 +25,21 @@ func LoadConfig() *Config {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	// Construct the PostgreSQL connection string dynamically
+	// Construct the PostgreSQL connection string dynamically in URL format
 	dbUser := getEnv("DB_USER", "")
 	dbPassword := getEnv("DB_PASSWORD", "")
 	dbName := getEnv("DB_NAME", "")
 	dbHost := getEnv("DB_HOST", "localhost")
 	dbPort := getEnv("DB_PORT", "5432")
 	dbSSLMode := getEnv("DB_SSLMODE", "disable")
-	dbConnectionStr := "user=" + dbUser + " password=" + dbPassword + " dbname=" + dbName + " host=" + dbHost + " port=" + dbPort + " sslmode=" + dbSSLMode
+	dbConnectionStr := "postgres://" + dbUser + ":" + dbPassword + "@" + dbHost + ":" + dbPort + "/" + dbName + "?sslmode=" + dbSSLMode
 
 	config := &Config{
 		ServerPort:      getEnv("SERVER_PORT", ":3000"),
 		DBConnectionStr: dbConnectionStr,
 		ExternalAPIBase: getEnv("EXTERNAL_API_BASE", "http://localhost:4001"),
 		LogLevel:        getEnv("LOG_LEVEL", "info"),
+		MigrationPath:   getEnv("MIGRATION_PATH", "file://db/migrations"),
 	}
 
 	// Parse duration for request timeout

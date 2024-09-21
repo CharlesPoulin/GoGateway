@@ -3,13 +3,16 @@ POST http://localhost:3000/authenticate
 Content-Type: application/json
 
 {
-  "username": "your_username",
-  "password": "your_password"
+  "username": "admin",
+  "password": "password"
 }
 
-### Fetch the authenticated user information (use the token from the previous request)
-GET http://localhost:3000/user
-Authorization: Bearer {{token}}
+### Save the token from the authentication response
+> {%client.token = response.body.token%}
+
+### Fetch the authenticated user information using the token from the previous request
+GET http://localhost:3000/user?id=123
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjcxOTY5NTgsInVzZXJuYW1lIjoiYWRtaW4ifQ._aAKSqOqKLWsuHpOKDeCJo8T0CLq7IA6zAea2qLtrIc
 
 ### Health check endpoint (does not require authentication)
 GET http://localhost:3000/health

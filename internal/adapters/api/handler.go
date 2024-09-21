@@ -30,7 +30,6 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.AuthService.GetUserByID(userID)
 	if err != nil {
-		// No need for type assertion since err is already of type *errors.AppError
 		util.RespondWithError(w, err.GetStatusCode(), err.Error())
 		return
 	}
@@ -52,7 +51,6 @@ func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.AuthService.Authenticate(creds.Username, creds.Password)
 	if err != nil {
-		// No need for type assertion since err is already of type *errors.AppError
 		util.RespondWithError(w, err.GetStatusCode(), err.Error())
 		return
 	}
