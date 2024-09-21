@@ -22,7 +22,7 @@ func (m *MockAuthRepository) GetUserByID(id string) (*domain.User, *errors.AppEr
 func TestGetUserByID_Success(t *testing.T) {
 	logger := util.NewLogger("info")
 	repo := &MockAuthRepository{
-		user: &domain.User{ID: "123", Username: "testuser", Email: "test@example.com"},
+		user: &domain.User{ID: "123", Username: "testuser"},
 		err:  nil,
 	}
 	authService := app.NewAuthService(repo, nil, "", logger)

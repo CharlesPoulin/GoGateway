@@ -11,7 +11,7 @@ Content-Type: application/json
 > {%client.token = response.body.token%}
 
 ### Fetch the authenticated user information using the token from the previous request
-GET http://localhost:3000/user?id=123
+GET http://localhost:3000/user?id=1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjcxOTY5NTgsInVzZXJuYW1lIjoiYWRtaW4ifQ._aAKSqOqKLWsuHpOKDeCJo8T0CLq7IA6zAea2qLtrIc
 
 

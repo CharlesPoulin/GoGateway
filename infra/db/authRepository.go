@@ -35,9 +35,9 @@ func NewAuthRepository(connStr string, logger util.Logger) (ports.AuthRepository
 // GetUserByID fetches a user by ID
 func (r *AuthRepository) GetUserByID(id string) (*domain.User, *errors.AppError) {
 	var user domain.User
-	query := "SELECT id, username, email FROM users WHERE id = $1"
+	query := "SELECT id, username FROM users WHERE id = $1"
 	row := r.db.QueryRow(query, id)
-	if err := row.Scan(&user.ID, &user.Username, &user.Email); err != nil {
+	if err := row.Scan(&user.ID, &user.Username); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NewNotFoundError("User not found", nil)
 		}
@@ -49,7 +49,7 @@ func (r *AuthRepository) GetUserByID(id string) (*domain.User, *errors.AppError)
 
 // GetUsers fetches all users from the database
 func (r *AuthRepository) GetUsers() ([]*domain.User, *errors.AppError) {
-	query := "SELECT id, username, email FROM users"
+	query := "SELECT id, username FROM users"
 	rows, err := r.db.Query(query)
 	if err != nil {
 		r.logger.Error("Database query failed", "error", err)
@@ -60,7 +60,7 @@ func (r *AuthRepository) GetUsers() ([]*domain.User, *errors.AppError) {
 	var users []*domain.User
 	for rows.Next() {
 		var user domain.User
-		if err := rows.Scan(&user.ID, &user.Username, &user.Email); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username); err != nil {
 			r.logger.Error("Failed to scan user row", "error", err)
 			return nil, errors.NewInternalServerError("Failed to scan user row", err)
 		}
