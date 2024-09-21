@@ -1,0 +1,18 @@
+### Authenticate and obtain a token
+POST http://localhost:3000/authenticate
+Content-Type: application/json
+
+{
+  "username": "your_username",
+  "password": "your_password"
+}
+
+### Fetch the authenticated user information (use the token from the previous request)
+GET http://localhost:3000/user
+Authorization: Bearer {{token}}
+
+### Health check endpoint (does not require authentication)
+GET http://localhost:3000/health
+
+### Public welcome route (does not require authentication)
+GET http://localhost:3000/
