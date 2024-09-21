@@ -31,6 +31,14 @@ func (e *AppError) Unwrap() error {
 
 // Constructors for different error types
 
+// NewAppError constructor function
+func NewAppError(message string, code int) *AppError {
+	return &AppError{
+		Message:    message,
+		StatusCode: code,
+	}
+}
+
 // NewBadRequestError creates a new AppError with 400 Bad Request status
 func NewBadRequestError(message string, err error) *AppError {
 	return &AppError{

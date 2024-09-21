@@ -50,6 +50,7 @@ func (s *authService) Authenticate(username, password string) (string, *errors.A
 
 func (s *authService) ValidateToken(token string) (bool, *errors.AppError) {
 	if token == "" {
+		// Return the pointer directly, no need for dereferencing
 		return false, errors.NewAppError("Invalid token", http.StatusBadRequest)
 	}
 
