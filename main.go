@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,26 +25,26 @@ func main() {
 	// Load configuration
 	cfg := config.LoadConfig()
 
-	s3Client, err := infra.NewS3Client("your-s3-bucket-name")
-	if err != nil {
-		log.Fatalf("Failed to initialize S3 client: %v", err)
-	}
+	// s3Client, err := infra.NewS3Client("your-s3-bucket-name")
+	// if err != nil {
+	// 	log.Fatalf("Failed to initialize S3 client: %v", err)
+	// }
 
-	// Upload a file to S3
-	err = s3Client.UploadFile("localfile.txt", "myfile.txt")
-	if err != nil {
-		log.Fatalf("Failed to upload file: %v", err)
-	}
+	// // Upload a file to S3
+	// err = s3Client.UploadFile("localfile.txt", "myfile.txt")
+	// if err != nil {
+	// 	log.Fatalf("Failed to upload file: %v", err)
+	// }
 
-	log.Println("File uploaded successfully")
+	// log.Println("File uploaded successfully")
 
-	// Download a file from S3
-	err = s3Client.DownloadFile("myfile.txt", "downloadedfile.txt")
-	if err != nil {
-		log.Fatalf("Failed to download file: %v", err)
-	}
+	// // Download a file from S3
+	// err = s3Client.DownloadFile("myfile.txt", "downloadedfile.txt")
+	// if err != nil {
+	// 	log.Fatalf("Failed to download file: %v", err)
+	// }
 
-	log.Println("File downloaded successfully")
+	// log.Println("File downloaded successfully")
 
 	// Initialize Logger
 	logger := util.NewLogger(cfg.LogLevel)
